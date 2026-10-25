@@ -1,16 +1,10 @@
 import { z } from 'zod';
 
+import { DIETARY_PREFERENCES, type DietaryPreference } from '@ai-meal-planner/shared';
+
 import { COUNTRY_CODES, type CountryCode } from '@/config/countries';
 
-export const DIETARY_PREFERENCES = [
-  'vegetarian',
-  'vegan',
-  'pescatarian',
-  'gluten-free',
-  'dairy-free',
-  'low-carb',
-] as const;
-export type DietaryPreference = (typeof DIETARY_PREFERENCES)[number];
+export { DIETARY_PREFERENCES, type DietaryPreference };
 
 export const DIETARY_PREFERENCE_LABELS: Record<DietaryPreference, string> = {
   vegetarian: 'Vegetarian',
