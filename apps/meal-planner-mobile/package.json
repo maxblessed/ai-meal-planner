@@ -1,0 +1,24 @@
+{
+  "name": "@ai-meal-planner/meal-planner-mobile",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "eas-build-pre-install": "cd ../../ && node tools/scripts/eas-build-pre-install.mjs . apps/meal-planner-mobile",
+    "eas-build-post-install": "cd ../../ && node tools/scripts/eas-build-post-install.mjs . apps/meal-planner-mobile"
+  },
+  "dependencies": {
+    "@expo/vector-icons": "*",
+    "@expo/metro": "*",
+    "@testing-library/react-native": "*",
+    "expo": "*",
+    "expo-splash-screen": "*",
+    "expo-status-bar": "*",
+    "expo-system-ui": "*",
+    "jest-expo": "*",
+    "react": "*",
+    "react-native": "*",
+    "react-native-svg": "*",
+    "react-native-svg-transformer": "*",
+    "react-native-web": "*"
+  }
+}

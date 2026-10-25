@@ -1,0 +1,10 @@
+{
+  "name": "@ai-meal-planner/meal-planner-mobile-e2e",
+  "version": "0.0.1",
+  "private": true,
+  "nx": {
+    "implicitDependencies": [
+      "@ai-meal-planner/meal-planner-mobile"
+    ]
+  }
+}

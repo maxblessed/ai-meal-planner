@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compileOnSave": false,
+  "files": [],
+  "references": [
+    {
+      "path": "./apps/meal-planner-mobile-e2e"
+    },
+    {
+      "path": "./apps/meal-planner-mobile"
+    }
+  ]
+}
