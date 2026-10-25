@@ -8,6 +8,12 @@
     },
     {
       "path": "./apps/meal-planner-mobile"
+    },
+    {
+      "path": "./packages/shared"
+    },
+    {
+      "path": "./apps/meal-planner-api"
     }
   ]
 }

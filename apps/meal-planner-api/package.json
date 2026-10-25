@@ -1,0 +1,115 @@
+{
+  "name": "@ai-meal-planner/meal-planner-api",
+  "version": "0.0.1",
+  "private": true,
+  "nx": {
+    "targets": {
+      "build": {
+        "executor": "@nx/esbuild:esbuild",
+        "outputs": [
+          "{options.outputPath}"
+        ],
+        "defaultConfiguration": "production",
+        "options": {
+          "platform": "node",
+          "outputPath": "apps/meal-planner-api/dist",
+          "format": [
+            "cjs"
+          ],
+          "bundle": true,
+          "main": "apps/meal-planner-api/src/main.ts",
+          "tsConfig": "apps/meal-planner-api/tsconfig.app.json",
+          "esbuildOptions": {
+            "sourcemap": true,
+            "outExtension": {
+              ".js": ".js"
+            }
+          },
+          "thirdParty": true,
+          "additionalEntryPoints": [
+            "apps/meal-planner-api/src/lambda.ts"
+          ],
+          "external": [
+            "mongodb-client-encryption",
+            "kerberos",
+            "@mongodb-js/zstd",
+            "@aws-sdk/credential-providers",
+            "gcp-metadata",
+            "snappy",
+            "socks",
+            "aws4",
+            "bson-ext"
+          ],
+          "generatePackageJson": false
+        },
+        "configurations": {
+          "development": {},
+          "production": {
+            "esbuildOptions": {
+              "sourcemap": false,
+              "outExtension": {
+                ".js": ".js"
+              }
+            }
+          }
+        }
+      },
+      "prune-lockfile": {
+        "dependsOn": [
+          "build"
+        ],
+        "cache": true,
+        "executor": "@nx/js:prune-lockfile",
+        "outputs": [
+          "{workspaceRoot}/apps/meal-planner-api/dist/package.json",
+          "{workspaceRoot}/apps/meal-planner-api/dist/package-lock.json"
+        ],
+        "options": {
+          "buildTarget": "build"
+        }
+      },
+      "copy-workspace-modules": {
+        "dependsOn": [
+          "build"
+        ],
+        "cache": true,
+        "outputs": [
+          "{workspaceRoot}/apps/meal-planner-api/dist/workspace_modules"
+        ],
+        "executor": "@nx/js:copy-workspace-modules",
+        "options": {
+          "buildTarget": "build"
+        }
+      },
+      "prune": {
+        "dependsOn": [
+          "prune-lockfile",
+          "copy-workspace-modules"
+        ],
+        "executor": "nx:noop"
+      },
+      "serve": {
+        "continuous": true,
+        "dependsOn": [
+          "^build"
+        ],
+        "readyWhen": {
+          "signal": true
+        }
+      },
+      "test": {
+        "options": {
+          "passWithNoTests": true
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "express": "*",
+    "mongoose": "*",
+    "serverless-http": "*",
+    "cors": "*",
+    "zod": "*",
+    "@ai-meal-planner/shared": "*"
+  }
+}

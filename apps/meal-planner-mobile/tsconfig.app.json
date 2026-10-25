@@ -37,5 +37,10 @@
     "**/*.jsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
+  ],
+  "references": [
+    {
+      "path": "../../packages/shared/tsconfig.lib.json"
+    }
   ]
 }

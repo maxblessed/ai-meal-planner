@@ -7,10 +7,12 @@
     "eas-build-post-install": "cd ../../ && node tools/scripts/eas-build-post-install.mjs . apps/meal-planner-mobile"
   },
   "dependencies": {
+    "@ai-meal-planner/shared": "*",
     "@expo/metro": "*",
     "@expo/vector-icons": "*",
     "@hookform/resolvers": "*",
     "@react-native-async-storage/async-storage": "*",
+    "@tanstack/react-query": "*",
     "@testing-library/react-native": "*",
     "expo": "*",
     "expo-constants": "*",

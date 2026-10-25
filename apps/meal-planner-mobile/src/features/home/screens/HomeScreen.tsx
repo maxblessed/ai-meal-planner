@@ -7,15 +7,21 @@ import { AppText } from '@/components/ui/AppText';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { LoadingState } from '@/components/ui/LoadingState';
 import { SectionHeading } from '@/components/ui/SectionHeading';
 import { formatMoney, getCountry } from '@/config/countries';
 import { DIETARY_PREFERENCE_LABELS, useRequiredPreferences } from '@/features/preferences';
+import { formatDateRange } from '@/features/meal-plans/components/format';
+import { useMealPlans } from '@/features/meal-plans/hooks/useMealPlans';
 import { colors, radii, spacing, touchTarget } from '@/theme';
 
 export function HomeScreen() {
   const router = useRouter();
   const preferences = useRequiredPreferences();
   const country = getCountry(preferences.countryCode);
+  const plans = useMealPlans();
+  const currentPlan = plans.data?.[0];
 
   const diet = preferences.dietaryPreferences.length
     ? preferences.dietaryPreferences.map((p) => DIETARY_PREFERENCE_LABELS[p]).join(', ')
@@ -71,11 +77,35 @@ export function HomeScreen() {
 
       <View style={styles.section}>
         <SectionHeading title="This week's meals" />
-        <EmptyState
-          icon="restaurant-outline"
-          title="No meal plan yet"
-          description="Once you create a plan, your meals for the week will show up here."
-        />
+        {plans.isPending ? (
+          <LoadingState message="Loading your meal plan…" />
+        ) : plans.isError ? (
+          <ErrorState
+            title="Couldn't load your meal plan"
+            message={plans.error.message}
+            onRetry={() => plans.refetch()}
+            retrying={plans.isRefetching}
+          />
+        ) : currentPlan ? (
+          <Card onPress={() => router.push('/meal-plan')} accessibilityLabel="Open your meal plan">
+            <View style={styles.linkRow}>
+              <Ionicons name="restaurant-outline" size={24} color={colors.primary} />
+              <View style={styles.headerText}>
+                <AppText variant="bodyStrong">{formatDateRange(currentPlan.startDate, currentPlan.endDate)}</AppText>
+                <AppText tone="muted">
+                  {currentPlan.days.reduce((count, day) => count + day.meals.length, 0)} meals planned
+                </AppText>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.placeholder} />
+            </View>
+          </Card>
+        ) : (
+          <EmptyState
+            icon="restaurant-outline"
+            title="No meal plan yet"
+            description="Create a plan and your meals for the week will show up here."
+          />
+        )}
       </View>
 
       <View style={styles.section}>
