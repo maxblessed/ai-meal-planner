@@ -16,7 +16,7 @@ describe('PreferencesWizard (onboarding)', () => {
   it('walks through every step, validates the budget, and persists the profile', async () => {
     const onSaved = jest.fn();
     render(
-      <PreferencesProvider>
+      <PreferencesProvider userId="user-1">
         <PreferencesWizard mode="onboarding" onSaved={onSaved} />
       </PreferencesProvider>,
     );
@@ -53,7 +53,7 @@ describe('PreferencesWizard (onboarding)', () => {
     press('Finish setup');
 
     await waitFor(() => expect(onSaved).toHaveBeenCalled());
-    const stored = JSON.parse((await AsyncStorage.getItem('mealplanner.userPreferences')) as string);
+    const stored = JSON.parse((await AsyncStorage.getItem('mealplanner.userPreferences.user-1')) as string);
     expect(stored.preferences).toEqual({
       countryCode: 'GB',
       householdSize: 3,

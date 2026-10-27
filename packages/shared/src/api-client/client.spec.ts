@@ -31,4 +31,64 @@ describe('createApiClient', () => {
     await client.mealPlans.list();
     expect(fetchMock).toHaveBeenCalledWith('http://x/api/v1/meal-plans', expect.objectContaining({ method: 'GET' }));
   });
+
+  describe('token provider', () => {
+    const planResponse = { data: [] };
+    const expired = () => json(401, { error: { code: 'TOKEN_EXPIRED', message: 'Your session has expired.' } });
+    const authHeader = (call: unknown[]) => ((call[1] as RequestInit).headers as Record<string, string>)['Authorization'];
+
+    it('sends the bearer token on authenticated calls only', async () => {
+      const fetchMock = jest.fn(() => json(200, planResponse));
+      const client = createApiClient({
+        baseUrl: 'http://x',
+        fetch: fetchMock as unknown as typeof fetch,
+        tokenProvider: { getAccessToken: () => 'token-1', refreshAccessToken: jest.fn() },
+      });
+      await client.mealPlans.list();
+      expect(authHeader(fetchMock.mock.calls[0])).toBe('Bearer token-1');
+
+      fetchMock.mockImplementation(() => json(401, { error: { code: 'INVALID_CREDENTIALS', message: 'no' } }));
+      await client.auth.login({ email: 'a@b.co', password: 'x' }).catch(() => undefined);
+      expect(authHeader(fetchMock.mock.calls[1])).toBeUndefined();
+    });
+
+    it('refreshes once on TOKEN_EXPIRED and retries with the new token', async () => {
+      const fetchMock = jest.fn().mockImplementationOnce(expired).mockImplementation(() => json(200, planResponse));
+      const refreshAccessToken = jest.fn().mockResolvedValue('token-2');
+      const client = createApiClient({
+        baseUrl: 'http://x',
+        fetch: fetchMock as unknown as typeof fetch,
+        tokenProvider: { getAccessToken: () => 'token-1', refreshAccessToken },
+      });
+
+      await expect(client.mealPlans.list()).resolves.toEqual([]);
+      expect(refreshAccessToken).toHaveBeenCalledTimes(1);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(authHeader(fetchMock.mock.calls[1])).toBe('Bearer token-2');
+    });
+
+    it('does not loop: a second 401 after refreshing is surfaced', async () => {
+      const fetchMock = jest.fn(expired);
+      const refreshAccessToken = jest.fn().mockResolvedValue('token-2');
+      const client = createApiClient({
+        baseUrl: 'http://x',
+        fetch: fetchMock as unknown as typeof fetch,
+        tokenProvider: { getAccessToken: () => 'token-1', refreshAccessToken },
+      });
+      await expect(client.mealPlans.list()).rejects.toMatchObject({ code: 'TOKEN_EXPIRED' });
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(refreshAccessToken).toHaveBeenCalledTimes(1);
+    });
+
+    it('surfaces the 401 when the session cannot be renewed', async () => {
+      const fetchMock = jest.fn(expired);
+      const client = createApiClient({
+        baseUrl: 'http://x',
+        fetch: fetchMock as unknown as typeof fetch,
+        tokenProvider: { getAccessToken: () => 'token-1', refreshAccessToken: () => Promise.resolve(undefined) },
+      });
+      await expect(client.mealPlans.list()).rejects.toMatchObject({ code: 'TOKEN_EXPIRED', status: 401 });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+  });
 });

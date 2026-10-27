@@ -6,7 +6,7 @@ import { connectToDatabase } from '../../infrastructure/database/mongodb';
 import { MealPlanModel } from './meal-plan.model';
 import type { MealPlanRepository, NewMealPlan } from './meal-plan.types';
 
-type Connection = { uri: string | undefined; dbName?: string };
+type Connection = { uri: string | undefined; dbName: string | undefined };
 
 export class MongoMealPlanRepository implements MealPlanRepository {
   constructor(private readonly connection: Connection) {}
@@ -21,22 +21,22 @@ export class MongoMealPlanRepository implements MealPlanRepository {
     return this.toPlan(created.toObject());
   }
 
-  async findById(id: string): Promise<MealPlan | null> {
+  async findById(ownerId: string, id: string): Promise<MealPlan | null> {
     await this.ready();
-    const doc = await MealPlanModel.findById(id).lean();
+    const doc = await MealPlanModel.findOne({ _id: id, ownerId }).lean();
     return doc ? this.toPlan(doc) : null;
   }
 
-  async list(limit: number): Promise<MealPlan[]> {
+  async list(ownerId: string, limit: number): Promise<MealPlan[]> {
     await this.ready();
     // ObjectIds are time-ordered, so sorting by _id gives newest first.
-    const docs = await MealPlanModel.find().sort({ _id: -1 }).limit(limit).lean();
+    const docs = await MealPlanModel.find({ ownerId }).sort({ _id: -1 }).limit(limit).lean();
     return docs.map((doc) => this.toPlan(doc));
   }
 
-  async updateDays(id: string, days: MealPlanDay[]): Promise<MealPlan | null> {
+  async updateDays(ownerId: string, id: string, days: MealPlanDay[]): Promise<MealPlan | null> {
     await this.ready();
-    const doc = await MealPlanModel.findByIdAndUpdate(id, { $set: { days } }, { new: true }).lean();
+    const doc = await MealPlanModel.findOneAndUpdate({ _id: id, ownerId }, { $set: { days } }, { new: true }).lean();
     return doc ? this.toPlan(doc) : null;
   }
 
@@ -49,31 +49,38 @@ export class MongoMealPlanRepository implements MealPlanRepository {
 
 /** Development/test repository. Data is lost when the process exits. */
 export class InMemoryMealPlanRepository implements MealPlanRepository {
-  private readonly plans = new Map<string, MealPlan>();
+  private readonly plans = new Map<string, MealPlan & { ownerId: string }>();
 
-  async create(plan: NewMealPlan): Promise<MealPlan> {
+  async create({ ownerId, ...plan }: NewMealPlan): Promise<MealPlan> {
     const created = { ...plan, id: randomBytes(12).toString('hex') };
-    this.plans.set(created.id, structuredClone(created));
+    this.plans.set(created.id, structuredClone({ ...created, ownerId }));
     return created;
   }
 
-  async findById(id: string): Promise<MealPlan | null> {
+  async findById(ownerId: string, id: string): Promise<MealPlan | null> {
     const plan = this.plans.get(id);
-    return plan ? structuredClone(plan) : null;
+    return plan?.ownerId === ownerId ? this.publicCopy(plan) : null;
   }
 
-  async list(limit: number): Promise<MealPlan[]> {
+  async list(ownerId: string, limit: number): Promise<MealPlan[]> {
     return [...this.plans.values()]
+      .filter((plan) => plan.ownerId === ownerId)
       .reverse()
       .slice(0, limit)
-      .map((plan) => structuredClone(plan));
+      .map((plan) => this.publicCopy(plan));
   }
 
-  async updateDays(id: string, days: MealPlanDay[]): Promise<MealPlan | null> {
+  async updateDays(ownerId: string, id: string, days: MealPlanDay[]): Promise<MealPlan | null> {
     const plan = this.plans.get(id);
-    if (!plan) return null;
+    if (!plan || plan.ownerId !== ownerId) return null;
     const updated = { ...plan, days: structuredClone(days) };
     this.plans.set(id, updated);
-    return structuredClone(updated);
+    return this.publicCopy(updated);
+  }
+
+  private publicCopy(plan: MealPlan & { ownerId: string }): MealPlan {
+    const copy: MealPlan & { ownerId?: string } = structuredClone(plan);
+    delete copy.ownerId;
+    return copy;
   }
 }

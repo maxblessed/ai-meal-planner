@@ -2,7 +2,7 @@ import type { MealPlan } from '@ai-meal-planner/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useRequiredPreferences } from '@/features/preferences';
-import { getApiClient } from '../api/apiClient';
+import { getApiClient } from '@/features/auth/api/apiClient';
 
 export const mealPlanKeys = {
   all: ['meal-plans'] as const,

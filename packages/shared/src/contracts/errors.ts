@@ -2,6 +2,16 @@ import { z } from 'zod';
 
 export const API_ERROR_CODES = [
   'VALIDATION_ERROR',
+  /** Missing, malformed, invalid or revoked access token. */
+  'UNAUTHENTICATED',
+  /** The access token is valid but expired: refresh it and retry. */
+  'TOKEN_EXPIRED',
+  /** Wrong email or password. Deliberately identical for both. */
+  'INVALID_CREDENTIALS',
+  'INVALID_REFRESH_TOKEN',
+  'EMAIL_ALREADY_REGISTERED',
+  'TOO_MANY_REQUESTS',
+  /** Also used when a resource belongs to someone else, so existence isn't revealed. */
   'NOT_FOUND',
   /** The requested diet/allergy/dislike combination can't be met by the available meals. */
   'UNSATISFIABLE_PREFERENCES',

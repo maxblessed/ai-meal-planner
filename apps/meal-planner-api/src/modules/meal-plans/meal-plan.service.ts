@@ -32,7 +32,7 @@ export class MealPlanService {
     this.now = now;
   }
 
-  async createPlan(request: ParsedCreateMealPlanRequest): Promise<MealPlan> {
+  async createPlan(ownerId: string, request: ParsedCreateMealPlanRequest): Promise<MealPlan> {
     const { startDate: requestedStart, days: dayCount, ...constraints } = request;
     const now = this.now().toISOString();
     const startDate = requestedStart ?? now.slice(0, 10);
@@ -40,6 +40,7 @@ export class MealPlanService {
     const days = await this.generator.generatePlan({ constraints, startDate, days: dayCount });
 
     return this.repository.create({
+      ownerId,
       ...constraints,
       // Currency always comes from the country config, never from the client.
       currencyCode: getCountry(constraints.countryCode).currencyCode,
@@ -56,19 +57,19 @@ export class MealPlanService {
     });
   }
 
-  listPlans(): Promise<MealPlan[]> {
-    return this.repository.list(LIST_LIMIT);
+  listPlans(ownerId: string): Promise<MealPlan[]> {
+    return this.repository.list(ownerId, LIST_LIMIT);
   }
 
-  async getPlan(id: string): Promise<MealPlan> {
-    const plan = await this.repository.findById(id);
+  async getPlan(ownerId: string, id: string): Promise<MealPlan> {
+    const plan = await this.repository.findById(ownerId, id);
     if (!plan) throw notFound('Meal plan not found.');
     return plan;
   }
 
   /** Swaps one meal for a different one that satisfies the plan's original constraints. The meal keeps its id. */
-  async replaceMeal(planId: string, mealId: string): Promise<MealPlan> {
-    const plan = await this.getPlan(planId);
+  async replaceMeal(ownerId: string, planId: string, mealId: string): Promise<MealPlan> {
+    const plan = await this.getPlan(ownerId, planId);
 
     const day = plan.days.find((d) => d.meals.some((meal) => meal.id === mealId));
     const current = day?.meals.find((meal) => meal.id === mealId);
@@ -87,7 +88,7 @@ export class MealPlanService {
       meals: d.meals.map((meal) => (meal.id === mealId ? updatedMeal : meal)),
     }));
 
-    const updated = await this.repository.updateDays(planId, days);
+    const updated = await this.repository.updateDays(ownerId, planId, days);
     if (!updated) throw new AppError('NOT_FOUND', 404, 'Meal plan not found.');
     return updated;
   }

@@ -15,6 +15,9 @@ const request: ParsedCreateMealPlanRequest = {
   days: 7,
 };
 
+const OWNER = 'user-1';
+const OTHER = 'user-2';
+
 const build = () => {
   const repository = new InMemoryMealPlanRepository();
   const service = new MealPlanService({
@@ -28,7 +31,7 @@ const build = () => {
 describe('MealPlanService', () => {
   it('creates and persists a plan with derived currency, dates and honest provenance', async () => {
     const { service } = build();
-    const plan = await service.createPlan(request);
+    const plan = await service.createPlan(OWNER, request);
 
     expect(plan).toMatchObject({
       countryCode: 'GB',
@@ -41,41 +44,41 @@ describe('MealPlanService', () => {
       generation: { status: 'completed', source: 'development-sample' },
     });
     expect(plan.days).toHaveLength(7);
-    expect(await service.getPlan(plan.id)).toEqual(plan);
+    expect(await service.getPlan(OWNER, plan.id)).toEqual(plan);
   });
 
   it('honours an explicit start date and shorter plans', async () => {
     const { service } = build();
-    const plan = await service.createPlan({ ...request, startDate: '2026-12-30', days: 3 });
+    const plan = await service.createPlan(OWNER, { ...request, startDate: '2026-12-30', days: 3 });
     expect([plan.startDate, plan.endDate]).toEqual(['2026-12-30', '2027-01-01']);
   });
 
   it('lists newest first', async () => {
     const { service } = build();
-    const first = await service.createPlan(request);
-    const second = await service.createPlan(request);
-    expect((await service.listPlans()).map((p) => p.id)).toEqual([second.id, first.id]);
+    const first = await service.createPlan(OWNER, request);
+    const second = await service.createPlan(OWNER, request);
+    expect((await service.listPlans(OWNER)).map((p) => p.id)).toEqual([second.id, first.id]);
   });
 
   it('throws NOT_FOUND for unknown plans', async () => {
-    await expect(build().service.getPlan('0'.repeat(24))).rejects.toMatchObject({ code: 'NOT_FOUND', status: 404 });
+    await expect(build().service.getPlan(OWNER, '0'.repeat(24))).rejects.toMatchObject({ code: 'NOT_FOUND', status: 404 });
   });
 
   it('does not persist anything when generation fails', async () => {
     const { service, repository } = build();
     await expect(
-      service.createPlan({ ...request, dietaryPreferences: ['vegan', 'gluten-free', 'low-carb'] }),
+      service.createPlan(OWNER, { ...request, dietaryPreferences: ['vegan', 'gluten-free', 'low-carb'] }),
     ).rejects.toBeInstanceOf(AppError);
-    expect(await repository.list(10)).toEqual([]);
+    expect(await repository.list(OWNER, 10)).toEqual([]);
   });
 
   describe('replaceMeal', () => {
     it('replaces one meal in place, keeping its id and leaving the rest untouched', async () => {
       const { service } = build();
-      const plan = await service.createPlan(request);
+      const plan = await service.createPlan(OWNER, request);
       const target = plan.days[1].meals[2];
 
-      const updated = await service.replaceMeal(plan.id, target.id);
+      const updated = await service.replaceMeal(OWNER, plan.id, target.id);
       const replaced = updated.days[1].meals[2];
 
       expect(replaced.id).toBe(target.id);
@@ -83,14 +86,35 @@ describe('MealPlanService', () => {
       expect(replaced.mealType).toBe('dinner');
       expect(replaced.dietaryTags).toContain('vegetarian');
       expect(updated.days[0]).toEqual(plan.days[0]);
-      expect(await service.getPlan(plan.id)).toEqual(updated);
+      expect(await service.getPlan(OWNER, plan.id)).toEqual(updated);
     });
 
     it('throws NOT_FOUND for an unknown meal or plan', async () => {
       const { service } = build();
-      const plan = await service.createPlan(request);
-      await expect(service.replaceMeal(plan.id, 'nope')).rejects.toMatchObject({ code: 'NOT_FOUND' });
-      await expect(service.replaceMeal('0'.repeat(24), 'nope')).rejects.toMatchObject({ code: 'NOT_FOUND' });
+      const plan = await service.createPlan(OWNER, request);
+      await expect(service.replaceMeal(OWNER, plan.id, 'nope')).rejects.toMatchObject({ code: 'NOT_FOUND' });
+      await expect(service.replaceMeal(OWNER, '0'.repeat(24), 'nope')).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    });
+  });
+
+  describe('ownership', () => {
+    it("never exposes or modifies another user's plans", async () => {
+      const { service } = build();
+      const plan = await service.createPlan(OWNER, request);
+      const mealId = plan.days[0].meals[0].id;
+
+      expect(await service.listPlans(OTHER)).toEqual([]);
+      await expect(service.getPlan(OTHER, plan.id)).rejects.toMatchObject({ code: 'NOT_FOUND', status: 404 });
+      await expect(service.replaceMeal(OTHER, plan.id, mealId)).rejects.toMatchObject({ code: 'NOT_FOUND', status: 404 });
+
+      // The owner's plan is untouched by the failed attempt.
+      expect(await service.getPlan(OWNER, plan.id)).toEqual(plan);
+    });
+
+    it('does not leak the owner id in responses', async () => {
+      const plan = await build().service.createPlan(OWNER, request);
+      expect(JSON.stringify(plan)).not.toContain(OWNER);
+      expect(plan).not.toHaveProperty('ownerId');
     });
   });
 });

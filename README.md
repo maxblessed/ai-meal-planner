@@ -6,6 +6,17 @@
 
 [Learn more about this workspace setup and its capabilities](https://nx.dev/nx-api/expo?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) or run `npx nx graph` to visually explore what was created. Now, let's get you up to speed!
 
+## Getting Started
+
+```sh
+npm install
+npm run dev:api      # terminal 1: API on http://localhost:3000
+npm run dev:mobile   # terminal 2: Expo (scan the QR code, or press i / a / w)
+npm run check        # typecheck + lint + test
+```
+
+See [docs/development.md](docs/development.md) for the full command reference, environment setup and troubleshooting.
+
 ## Run tasks
 
 To run the dev server for your app, use:

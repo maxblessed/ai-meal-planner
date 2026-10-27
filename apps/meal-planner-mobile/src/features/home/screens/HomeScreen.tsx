@@ -11,6 +11,7 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { SectionHeading } from '@/components/ui/SectionHeading';
 import { formatMoney, getCountry } from '@/config/countries';
+import { useAuth } from '@/features/auth';
 import { DIETARY_PREFERENCE_LABELS, useRequiredPreferences } from '@/features/preferences';
 import { formatDateRange } from '@/features/meal-plans/components/format';
 import { useMealPlans } from '@/features/meal-plans/hooks/useMealPlans';
@@ -20,6 +21,7 @@ export function HomeScreen() {
   const router = useRouter();
   const preferences = useRequiredPreferences();
   const country = getCountry(preferences.countryCode);
+  const { user, logout } = useAuth();
   const plans = useMealPlans();
   const currentPlan = plans.data?.[0];
 
@@ -129,6 +131,15 @@ export function HomeScreen() {
           title="No savings to show yet"
           description="Supermarket price comparison isn't available yet. When it is, your savings will appear here."
         />
+      </View>
+
+      <View style={styles.section}>
+        <SectionHeading title="Account" />
+        <Card>
+          <AppText tone="muted">Signed in as</AppText>
+          <AppText variant="bodyStrong">{user?.email}</AppText>
+          <Button title="Sign out" variant="secondary" onPress={logout} />
+        </Card>
       </View>
     </Screen>
   );
