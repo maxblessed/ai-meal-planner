@@ -12,11 +12,12 @@ const envSchema = z.object({
   MONGODB_DB_NAME: z.string().min(1).optional(),
   /** Development only: store plans in process memory instead of MongoDB. */
   USE_IN_MEMORY_REPOSITORY: booleanFlag,
-  /**
-   * The API has no authentication yet. In production it refuses to start unless
-   * this is explicitly set, so it can't be exposed by accident.
-   */
-  ALLOW_UNAUTHENTICATED_API: booleanFlag,
+  /** HMAC secret for access tokens. Required; at least 32 characters. Never commit a real value. */
+  JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
+  ACCESS_TOKEN_MINUTES: z.coerce.number().int().min(1).max(60).default(15),
+  REFRESH_TOKEN_DAYS: z.coerce.number().int().min(1).max(90).default(30),
+  /** Set to "false" to disable the (per-instance, best-effort) auth rate limiter. */
+  AUTH_RATE_LIMIT: z.enum(['true', 'false']).default('true'),
   /** Comma-separated list of allowed browser origins. Unset = all origins outside production, none in production. */
   CORS_ALLOWED_ORIGINS: z.string().optional(),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'silent']).default('info'),
@@ -27,7 +28,10 @@ export type Env = {
   mongoUri?: string;
   mongoDbName?: string;
   useInMemoryRepository: boolean;
-  allowUnauthenticatedApi: boolean;
+  jwtSecret: string;
+  accessTokenMinutes: number;
+  refreshTokenDays: number;
+  authRateLimitEnabled: boolean;
   corsAllowedOrigins?: string[];
   logLevel: 'debug' | 'info' | 'warn' | 'error' | 'silent';
 };
@@ -51,19 +55,15 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
   if (env.NODE_ENV === 'production' && env.USE_IN_MEMORY_REPOSITORY) {
     throw new ConfigurationError('USE_IN_MEMORY_REPOSITORY is not allowed in production.');
   }
-  if (env.NODE_ENV === 'production' && !env.ALLOW_UNAUTHENTICATED_API) {
-    throw new ConfigurationError(
-      'Refusing to start in production: this API has no authentication or ownership checks yet. ' +
-        'Add authentication, or set ALLOW_UNAUTHENTICATED_API=true to acknowledge the risk.',
-    );
-  }
-
   return {
     nodeEnv: env.NODE_ENV,
     mongoUri: env.MONGODB_URI,
     mongoDbName: env.MONGODB_DB_NAME,
     useInMemoryRepository: env.USE_IN_MEMORY_REPOSITORY,
-    allowUnauthenticatedApi: env.ALLOW_UNAUTHENTICATED_API,
+    jwtSecret: env.JWT_SECRET,
+    accessTokenMinutes: env.ACCESS_TOKEN_MINUTES,
+    refreshTokenDays: env.REFRESH_TOKEN_DAYS,
+    authRateLimitEnabled: env.AUTH_RATE_LIMIT === 'true',
     corsAllowedOrigins: env.CORS_ALLOWED_ORIGINS?.split(',')
       .map((origin) => origin.trim())
       .filter(Boolean),

@@ -1,14 +1,19 @@
 import type { Meal, MealPlan, MealPlanConstraints, MealPlanDay, MealType } from '@ai-meal-planner/shared';
 
-export type NewMealPlan = Omit<MealPlan, 'id'>;
+/** `ownerId` is storage-only: it is never part of the API response. */
+export type NewMealPlan = Omit<MealPlan, 'id'> & { ownerId: string };
 
+/**
+ * Every read and write is scoped to an owner, so a plan can never be reached with another user's id.
+ * Lookups for plans owned by someone else behave exactly like lookups for plans that don't exist.
+ */
 export interface MealPlanRepository {
   create(plan: NewMealPlan): Promise<MealPlan>;
-  findById(id: string): Promise<MealPlan | null>;
+  findById(ownerId: string, id: string): Promise<MealPlan | null>;
   /** Newest first. */
-  list(limit: number): Promise<MealPlan[]>;
-  /** Replaces a plan's days. Returns null if the plan doesn't exist. */
-  updateDays(id: string, days: MealPlanDay[]): Promise<MealPlan | null>;
+  list(ownerId: string, limit: number): Promise<MealPlan[]>;
+  /** Replaces a plan's days. Returns null if the owner has no such plan. */
+  updateDays(ownerId: string, id: string, days: MealPlanDay[]): Promise<MealPlan | null>;
 }
 
 export type GeneratorInfo = {

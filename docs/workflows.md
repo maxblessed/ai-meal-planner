@@ -1,5 +1,12 @@
 # Workflows
 
+## Sign up / sign in
+1. Signed-out users see **Sign in** (and can switch to **Create account**). Every other route redirects there.
+2. Registering (email + password of 8+ characters, optional name) signs the user in. Signing in with wrong credentials shows one generic message; an already-registered email is reported on the email field.
+3. A signed-in user without saved preferences goes to onboarding; otherwise to Home.
+4. **Sign out** (Home → Account) ends the session on the server, clears tokens from the device, and clears cached plans. Signing in as a different person on the same device shows none of the previous user's data.
+5. Sessions are renewed automatically in the background. If renewal is rejected the user is returned to Sign in. On the web a page reload signs the user out (tokens are memory-only there).
+
 ## Onboarding (first run)
 1. **Country** – Ireland (EUR) or United Kingdom (GBP); currency is derived.
 2. **Household** – 1–12 people (default 1).
@@ -18,4 +25,4 @@ Home → options icon → `/preferences` opens the same wizard on the review ste
 5. **Home** shows the current plan's date range and meal count once one exists.
 
 ## Not implemented yet
-AI generation, shopping lists, price comparison/savings (placeholder screens), authentication.
+AI generation, shopping lists, price comparison/savings (placeholder screens), email verification and password reset.

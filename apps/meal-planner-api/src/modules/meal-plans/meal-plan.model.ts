@@ -29,6 +29,7 @@ const daySchema = new Schema({ date: { type: String, required: true }, meals: [m
 // Dates are stored as ISO strings so documents match the shared API contract 1:1.
 const mealPlanSchema = new Schema<NewMealPlan>(
   {
+    ownerId: { type: String, required: true, index: true },
     startDate: { type: String, required: true },
     endDate: { type: String, required: true },
     countryCode: { type: String, required: true },

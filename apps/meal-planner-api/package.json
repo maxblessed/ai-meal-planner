@@ -110,6 +110,8 @@
     "serverless-http": "*",
     "cors": "*",
     "zod": "*",
-    "@ai-meal-planner/shared": "*"
+    "@ai-meal-planner/shared": "*",
+    "jose": "*",
+    "express-rate-limit": "*"
   }
 }

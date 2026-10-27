@@ -4,14 +4,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import { PreferencesProvider, usePreferences } from '@/features/preferences';
-import { getApiClient } from '../api/apiClient';
+import { getApiClient } from '@/features/auth/api/apiClient';
 import { MealPlanScreen } from './MealPlanScreen';
 import { MealDetailScreen } from './MealDetailScreen';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
-jest.mock('../api/apiClient');
+jest.mock('@/features/auth/api/apiClient');
 
 const mockPush = jest.fn();
 let mockParams: Record<string, string> = {};
@@ -48,7 +48,7 @@ function renderWithProviders(ui: React.ReactElement) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false, gcTime: Infinity } } });
   return render(
     <QueryClientProvider client={client}>
-      <PreferencesProvider>
+      <PreferencesProvider userId="user-1">
         <ReadyGate>{ui}</ReadyGate>
       </PreferencesProvider>
     </QueryClientProvider>,
@@ -60,7 +60,7 @@ beforeEach(async () => {
   mockParams = {};
   (getApiClient as jest.Mock).mockReturnValue(api);
   await AsyncStorage.clear();
-  await AsyncStorage.setItem('mealplanner.userPreferences', JSON.stringify({ version: 1, preferences }));
+  await AsyncStorage.setItem('mealplanner.userPreferences.user-1', JSON.stringify({ version: 1, preferences }));
 });
 
 describe('MealPlanScreen', () => {

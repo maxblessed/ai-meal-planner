@@ -21,31 +21,48 @@ type PreferencesContextValue = {
 
 const PreferencesContext = createContext<PreferencesContextValue | null>(null);
 
-export function PreferencesProvider({ children }: { children: ReactNode }) {
-  const [status, setStatus] = useState<PreferencesContextValue['status']>('loading');
-  const [preferences, setPreferences] = useState<UserPreferences | null>(null);
+type PreferencesProviderProps = {
+  /** The signed-in user. Undefined while signed out, when there is nothing to load. */
+  userId: string | undefined;
+  children: ReactNode;
+};
+
+export function PreferencesProvider({ userId, children }: PreferencesProviderProps) {
+  // Remember which user the loaded preferences belong to, so the very first render after a
+  // user change is already "loading" (no flash of onboarding for someone who has preferences).
+  const [loaded, setLoaded] = useState<{ userId: string | undefined; preferences: UserPreferences | null }>({
+    userId: undefined,
+    preferences: null,
+  });
+  const isCurrent = loaded.userId === userId;
 
   useEffect(() => {
+    if (!userId) {
+      setLoaded({ userId: undefined, preferences: null });
+      return;
+    }
     let active = true;
-    loadPreferences().then((stored) => {
-      if (!active) return;
-      setPreferences(stored);
-      setStatus('ready');
+    loadPreferences(userId).then((stored) => {
+      if (active) setLoaded({ userId, preferences: stored });
     });
     return () => {
       active = false;
     };
-  }, []);
+  }, [userId]);
 
-  const savePreferences = useCallback(async (next: UserPreferences) => {
-    await persistPreferences(next);
-    setPreferences(next);
-  }, []);
-
-  const value = useMemo(
-    () => ({ status, preferences, savePreferences }),
-    [status, preferences, savePreferences],
+  const savePreferences = useCallback(
+    async (next: UserPreferences) => {
+      if (!userId) throw new Error('Cannot save preferences while signed out');
+      await persistPreferences(userId, next);
+      setLoaded({ userId, preferences: next });
+    },
+    [userId],
   );
+
+  const status: PreferencesContextValue['status'] = isCurrent ? 'ready' : 'loading';
+  const preferences = isCurrent ? loaded.preferences : null;
+
+  const value = useMemo(() => ({ status, preferences, savePreferences }), [status, preferences, savePreferences]);
 
   return <PreferencesContext.Provider value={value}>{children}</PreferencesContext.Provider>;
 }
